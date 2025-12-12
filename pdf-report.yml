@@ -2,8 +2,8 @@ name: Daily PDF Report
 
 on:
   schedule:
-    - cron: '10 16 * * *'     # 每天 00:10 台灣時間
-  workflow_dispatch:
+    - cron: '10 16 * * *'  # 每天 00:10 台灣時間
+  workflow_dispatch:  # 手動觸發
 
 jobs:
   generate-and-send:
@@ -39,7 +39,7 @@ pdf.set_font('Helvetica', 'B', 20)
 pdf.cell(0, 20, 'Big-8 Layoffs War Room 2025', ln=1, align='C')
 pdf.set_font('Helvetica', size=14)
 pdf.ln(10)
-pdf.cell(0, 10, f'報告時間：{datetime.now().strftime("%Y年%m月%d日 %H:%M")}', ln=1)
+pdf.cell(0, 10, f'報告時間：{datetime.now().strftime(\"%Y年%m月%d日 %H:%M\")}', ln=1)
 
 data = [
   ('Google', '12,000', '雲端重組 200+', 'Gemini 優先'),
@@ -52,7 +52,7 @@ data = [
   ('Tesla', '14,800', 'Austin 供應鏈 800', 'Optimus 轉型 ← 紅色警報'),
 ]
 
-for i, (c, t, l, r) in enumerate(data):
+for c, t, l, r in data:
     if c == 'Tesla':
         pdf.set_fill_color(255, 68, 68)
         pdf.set_text_color(255, 255, 255)

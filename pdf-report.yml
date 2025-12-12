@@ -1,0 +1,85 @@
+name: Daily PDF Report
+
+on:
+  schedule:
+    - cron: '10 16 * * *'     # 每天 00:10 台灣時間
+  workflow_dispatch:
+
+jobs:
+  generate-and-send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install fpdf2
+        run: pip install fpdf2
+
+      - name: Generate PDF + Send Email
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        run: |
+          python -c "
+from fpdf import FPDF
+from datetime import datetime
+import smtplib, ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+
+# 生成 PDF
+pdf = FPDF()
+pdf.add_page()
+pdf.set_font('Helvetica', 'B', 20)
+pdf.cell(0, 20, 'Big-8 Layoffs War Room 2025', ln=1, align='C')
+pdf.set_font('Helvetica', size=14)
+pdf.ln(10)
+pdf.cell(0, 10, f'報告時間：{datetime.now().strftime("%Y年%m月%d日 %H:%M")}', ln=1)
+
+data = [
+  ('Google', '12,000', '雲端重組 200+', 'Gemini 優先'),
+  ('Microsoft', '15,800', 'Azure 1,200', 'Copilot 整合'),
+  ('Meta', '4,800', 'Reality Labs 300', 'Llama 3.5'),
+  ('Amazon', '14,200', '企業角色 400', 'AWS AI'),
+  ('Apple', '120', '銷售尾聲', 'Apple Intelligence'),
+  ('Nvidia', '0', '無裁員', 'Blackwell 爆單'),
+  ('Broadcom', '0', '穩定', '光子 AI'),
+  ('Tesla', '14,800', 'Austin 供應鏈 800', 'Optimus 轉型 ← 紅色警報'),
+]
+
+for i, (c, t, l, r) in enumerate(data):
+    if c == 'Tesla':
+        pdf.set_fill_color(255, 68, 68)
+        pdf.set_text_color(255, 255, 255)
+    else:
+        pdf.set_fill_color(40, 40, 40)
+        pdf.set_text_color(255, 255, 255)
+    pdf.cell(0, 12, f'{c:10} {t:>8} 人    最新：{l}    趨勢：{r}', ln=1, fill=True)
+    pdf.set_text_color(200, 200, 200)
+
+pdf.output('Layoffs-Report.pdf')
+
+# 寄信
+msg = MIMEMultipart()
+msg['From'] = '${{ secrets.EMAIL_USER }}'
+msg['To'] = 'edzhai066@gmail.com'
+msg['Subject'] = '【裁員戰情室自動報告】' + datetime.now().strftime('%Y-%m-%d')
+
+msg.attach(MIMEText('站長您好！\\n\\n附件為今日最新八巨頭裁員報告，Tesla 已標紅警報。\\n\\n戰情室永遠比裁員快一步！', 'plain', 'utf-8'))
+
+with open('Layoffs-Report.pdf', 'rb') as f:
+    part = MIMEApplication(f.read(), Name='Layoffs-Report-2025.pdf')
+    part['Content-Disposition'] = 'attachment; filename=\"Layoffs-Report-2025.pdf\"'
+    msg.attach(part)
+
+context = ssl.create_default_context()
+with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as server:
+    server.login('${{ secrets.EMAIL_USER }}', '${{ secrets.EMAIL_PASS }}')
+    server.sendmail('${{ secrets.EMAIL_USER }}', 'edzhai066@gmail.com', msg.as_string())
+print('PDF 報告已成功寄出！')
+          "
